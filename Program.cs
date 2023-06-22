@@ -1,5 +1,6 @@
 using nhl_service_dotnet.Services;
 using nhl_service_dotnet.Integrations;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +13,22 @@ builder.Services.AddScoped<NhlClient>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+//builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(s =>
+{
+    s.EnableAnnotations();
+    s.SwaggerDoc(
+        "v1",
+        new OpenApiInfo
+        {
+            Version = "v1",
+            Title = "NHL service",
+            Description = "Middleman service between free NHL api and NHL React Native app"
+        }
+    );
+});
 
 var app = builder.Build();
 

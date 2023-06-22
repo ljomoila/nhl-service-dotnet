@@ -1,3 +1,5 @@
+using Swashbuckle.AspNetCore.Annotations;
+
 namespace nhl_service_dotnet;
 
 [Serializable]
