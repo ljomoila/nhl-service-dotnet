@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
+using nhl_service_dotnet.Exceptions;
+using System.Net;
 
 namespace nhl_service_dotnet.Integrations
 {
@@ -27,11 +29,7 @@ namespace nhl_service_dotnet.Integrations
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    throw new HttpRequestException(
-                        "Failed to get teams",
-                        null,
-                        response.StatusCode
-                    );
+                    throw new NhlException("Failed to get teams", response.StatusCode);
                 }
 
                 var result = JsonConvert.DeserializeObject<Dictionary<string, Object>>(
@@ -40,7 +38,7 @@ namespace nhl_service_dotnet.Integrations
 
                 if (result == null || !result.ContainsKey("teams"))
                 {
-                    throw new Exception("No teams found from response");
+                    throw new NhlException("No teams found from response", HttpStatusCode.NotFound);
                 }
 
                 string teamsJsonString = JsonConvert.SerializeObject(result["teams"]);

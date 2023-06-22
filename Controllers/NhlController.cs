@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Diagnostics;
 using nhl_service_dotnet.Services;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Net;
+using nhl_service_dotnet.Exceptions;
 
 namespace nhl_service_dotnet.Controllers;
 
@@ -55,11 +57,15 @@ public class NhlController : ControllerBase
     {
         var exceptionHandlerFeature = HttpContext.Features.Get<IExceptionHandlerFeature>()!;
         var exception = exceptionHandlerFeature.Error;
-        var status = 500;
+        var status = HttpStatusCode.InternalServerError;
 
-        if (exception is HttpRequestException)
-            status = (int)((HttpRequestException)exception).StatusCode;
+        if (exception is NhlException)
+            status = ((NhlException)exception).StatusCode;
 
-        return Problem(detail: exception.StackTrace, title: exception.Message, statusCode: status);
+        return Problem(
+            detail: exception.StackTrace,
+            title: exception.Message,
+            statusCode: (int?)status
+        );
     }
 }
