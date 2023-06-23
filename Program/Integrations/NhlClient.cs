@@ -7,15 +7,18 @@ namespace nhl_service_dotnet.Integrations
 {
     public class NhlClient
     {
+        private readonly ILogger logger;
+
         private static readonly string apiUrl = "https://statsapi.web.nhl.com";
         private static readonly string apiPath = "/api/v1";
 
-        private readonly HttpClient _httpClient;
+        private readonly HttpClient httpClient;
 
-        public NhlClient(HttpClient httpClient)
+        public NhlClient(HttpClient httpClient, ILogger<NhlClient> logger)
         {
-            _httpClient = httpClient;
-            _httpClient.DefaultRequestHeaders.Accept.Add(
+            this.logger = logger;
+            this.httpClient = httpClient;
+            this.httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json")
             );
         }
@@ -24,7 +27,7 @@ namespace nhl_service_dotnet.Integrations
         {
             try
             {
-                HttpResponseMessage response = await _httpClient.GetAsync(
+                HttpResponseMessage response = await httpClient.GetAsync(
                     ConstructUrlWithPath("/teams")
                 );
 
@@ -48,11 +51,12 @@ namespace nhl_service_dotnet.Integrations
             }
             catch (Exception e)
             {
-                throw e;
+                logger.LogError("Failed to get teams, error: " + e.Message);
+                throw;
             }
         }
 
-        private string ConstructUrlWithPath(string path)
+        private static string ConstructUrlWithPath(string path)
         {
             if (path.Contains(apiPath))
                 return apiUrl + path;

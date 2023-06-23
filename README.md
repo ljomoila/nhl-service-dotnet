@@ -1,12 +1,12 @@
 # NHL service (dotnet)
 
-Middleman service between free (NHL api)[https://statsapi.web.nhl.com/api/v1/teams] and (235 NHL React Native app)[https://github.com/ljomoila/235]
+Middleman service between free [NHL api](https://statsapi.web.nhl.com/api/v1/teams) and [235 NHL React Native app](https://github.com/ljomoila/235).
 
 ## Development
 
 Make sure you have .NET version 7 or higher intalled.
 
-### Start and Debug
+### Run and Debug
 
 -   `cd Program`
 -   `dotnet run` - Runs the application and you can then test it in `http://localhost:5069/{route}`

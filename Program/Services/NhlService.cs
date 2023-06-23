@@ -1,7 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Net;
+using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Integrations;
 
 namespace nhl_service_dotnet.Services
@@ -17,7 +15,14 @@ namespace nhl_service_dotnet.Services
 
         public async Task<Team[]> GetTeams()
         {
-            return await this.client.GetTeams();
+            Team[]? teams = await client.GetTeams();
+
+            if (teams == null || teams.Length == 0)
+            {
+                throw new NhlException("No teams found", HttpStatusCode.OK);
+            }
+
+            return teams;
         }
     }
 }

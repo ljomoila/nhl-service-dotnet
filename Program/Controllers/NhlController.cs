@@ -12,11 +12,11 @@ namespace nhl_service_dotnet.Controllers;
 [Route("/")]
 public class NhlController : ControllerBase
 {
-    private readonly INhlService _service;
+    private readonly INhlService service;
 
     public NhlController(INhlService service)
     {
-        _service = service;
+        this.service = service;
     }
 
     [SwaggerOperation(Summary = "All teams")]
@@ -24,7 +24,7 @@ public class NhlController : ControllerBase
     [Route("teams")]
     public async Task<Team[]> GetTeams()
     {
-        return await _service.GetTeams();
+        return await service.GetTeams();
     }
 
     [SwaggerOperation(Summary = "All players")]
