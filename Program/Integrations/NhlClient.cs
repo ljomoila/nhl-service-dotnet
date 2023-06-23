@@ -17,13 +17,14 @@ namespace nhl_service_dotnet.Integrations
         public NhlClient(HttpClient httpClient, ILogger<NhlClient> logger)
         {
             this.logger = logger;
+
             this.httpClient = httpClient;
             this.httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json")
             );
         }
 
-        public async Task<Team[]?> GetTeams()
+        public async Task<List<Team>?> GetTeams()
         {
             try
             {
@@ -47,7 +48,7 @@ namespace nhl_service_dotnet.Integrations
 
                 string teamsJsonString = JsonConvert.SerializeObject(result["teams"]);
 
-                return JsonConvert.DeserializeObject<Team[]>(teamsJsonString);
+                return JsonConvert.DeserializeObject<List<Team>>(teamsJsonString);
             }
             catch (Exception e)
             {

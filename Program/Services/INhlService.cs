@@ -2,6 +2,6 @@ namespace nhl_service_dotnet.Services
 {
     public interface INhlService
     {
-        Task<Team[]> GetTeams();
+        Task<List<Team>> GetTeams();
     }
 }

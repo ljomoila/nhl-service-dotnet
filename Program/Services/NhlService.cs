@@ -13,11 +13,11 @@ namespace nhl_service_dotnet.Services
             this.client = client;
         }
 
-        public async Task<Team[]> GetTeams()
+        public async Task<List<Team>> GetTeams()
         {
-            Team[]? teams = await client.GetTeams();
+            List<Team>? teams = await client.GetTeams();
 
-            if (teams == null || teams.Length == 0)
+            if (teams == null || teams.Count == 0)
             {
                 throw new NhlException("No teams found", HttpStatusCode.OK);
             }

@@ -22,7 +22,7 @@ public class NhlController : ControllerBase
     [SwaggerOperation(Summary = "All teams")]
     [HttpGet]
     [Route("teams")]
-    public async Task<Team[]> GetTeams()
+    public async Task<List<Team>> GetTeams()
     {
         return await service.GetTeams();
     }

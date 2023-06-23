@@ -21,16 +21,16 @@ public class NhlClientTest
         HttpClient httpClient = CreateHttpClient(response, HttpStatusCode.OK);
 
         // Act
-        Team[]? teams = await CreateNhlClient(httpClient).GetTeams();
+        List<Team>? teams = await CreateNhlClient(httpClient).GetTeams();
 
         // Assert
         Assert.NotNull(teams);
-        Assert.Equal(2, teams.Length);
+        Assert.Equal(2, teams.Count);
         Assert.Equal("New Jersey Devils", teams[0].name);
     }
 
     [Fact]
-    public void TestGetTeams_InvalidStatus()
+    public void TestGetTeams_ThrowsInvalidStatus()
     {
         // Arrange
         HttpStatusCode expectedStatus = HttpStatusCode.BadRequest;
@@ -47,7 +47,7 @@ public class NhlClientTest
     }
 
     [Fact]
-    public void TestGetTeams_InvalidResponse()
+    public void TestGetTeams_ThrowsInvalidResponse()
     {
         // Arrange
         string response =
