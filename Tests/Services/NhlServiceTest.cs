@@ -31,7 +31,7 @@ namespace Tests.Services
         }
 
         [Fact]
-        public void TestGetTeams_ThrowsTeamsNoTeams()
+        public void TestGetTeams_ThrowsNoTeams()
         {
             // Arrange
             client.Setup(x => x.GetTeams()).ReturnsAsync(new List<Team>());
