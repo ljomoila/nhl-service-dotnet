@@ -10,11 +10,12 @@ namespace nhl_service_dotnet.Integrations
         private static readonly string apiUrl = "https://statsapi.web.nhl.com";
         private static readonly string apiPath = "/api/v1";
 
-        private readonly HttpClient httpClient = new HttpClient();
+        private readonly HttpClient _httpClient;
 
-        public NhlClient()
+        public NhlClient(HttpClient httpClient)
         {
-            httpClient.DefaultRequestHeaders.Accept.Add(
+            _httpClient = httpClient;
+            _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json")
             );
         }
@@ -23,7 +24,7 @@ namespace nhl_service_dotnet.Integrations
         {
             try
             {
-                HttpResponseMessage response = await httpClient.GetAsync(
+                HttpResponseMessage response = await _httpClient.GetAsync(
                     ConstructUrlWithPath("/teams")
                 );
 

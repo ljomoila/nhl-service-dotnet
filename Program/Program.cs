@@ -9,12 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<INhlService, NhlService>();
-builder.Services.AddScoped<NhlClient>();
+
+builder.Services.AddTransient<NhlClient>();
+builder.Services.AddHttpClient("NhlClient");
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-
-//builder.Services.AddSwaggerGen();
 
 builder.Services.AddSwaggerGen(s =>
 {
