@@ -6,9 +6,9 @@ namespace nhl_service_dotnet.Services
 {
     public class NhlService : INhlService
     {
-        private readonly NhlClient client;
+        private readonly INhlClient client;
 
-        public NhlService(NhlClient client)
+        public NhlService(INhlClient client)
         {
             this.client = client;
         }
@@ -19,7 +19,7 @@ namespace nhl_service_dotnet.Services
 
             if (teams == null || teams.Count == 0)
             {
-                throw new NhlException("No teams found", HttpStatusCode.OK);
+                throw new NhlException("No teams found", HttpStatusCode.NoContent);
             }
 
             return teams;

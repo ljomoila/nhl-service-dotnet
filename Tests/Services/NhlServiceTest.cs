@@ -1,3 +1,4 @@
+using System.Net;
 using Moq;
 using nhl_service_dotnet;
 using nhl_service_dotnet.Exceptions;
@@ -8,8 +9,9 @@ namespace Tests.Services
 {
     public class NhlServiceTest
     {
-        private readonly Mock<NhlClient> client = new Mock<NhlClient>();
         private NhlService service;
+
+        private Mock<INhlClient> client = new Mock<INhlClient>();
 
         public NhlServiceTest()
         {
@@ -40,7 +42,8 @@ namespace Tests.Services
             var ex = Assert.ThrowsAsync<NhlException>(async () => await service.GetTeams());
 
             // Assert
-            Assert.Equal("Failed to get teams", ex.Result.Message);
+            Assert.Equal("No teams found", ex.Result.Message);
+            Assert.Equal(HttpStatusCode.NoContent, ex.Result.StatusCode);
         }
     }
 }

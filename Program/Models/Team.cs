@@ -1,8 +1,7 @@
-using Swashbuckle.AspNetCore.Annotations;
+using System.Text.Json.Serialization;
 
 namespace nhl_service_dotnet;
 
-[Serializable]
 public class Team
 {
     public int id { get; set; }
@@ -13,5 +12,6 @@ public class Team
 
     public string? abbreviation { get; set; }
 
-    public string? apiLink { get; set; }
+    [JsonPropertyName("apiLink")]
+    public string? link { get; set; }
 }

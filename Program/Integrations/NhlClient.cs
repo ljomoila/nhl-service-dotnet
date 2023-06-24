@@ -5,7 +5,7 @@ using System.Net;
 
 namespace nhl_service_dotnet.Integrations
 {
-    public class NhlClient
+    public class NhlClient : INhlClient
     {
         private readonly ILogger logger;
 
