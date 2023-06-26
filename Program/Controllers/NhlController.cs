@@ -4,6 +4,7 @@ using nhl_service_dotnet.Services;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 using nhl_service_dotnet.Exceptions;
+using nhl_service_dotnet.Models;
 
 namespace nhl_service_dotnet.Controllers;
 
@@ -27,12 +28,12 @@ public class NhlController : ControllerBase
         return await service.GetTeams();
     }
 
-    [SwaggerOperation(Summary = "All players")]
+    [SwaggerOperation(Summary = "Player by id")]
     [HttpGet]
-    [Route("players")]
-    public string GetPlayers()
+    [Route("player/{id}")]
+    public async Task<Player> GetPlayer(int id)
     {
-        throw new NotImplementedException("Get players has not been implemented yet");
+        return await service.GetPlayer(id);
     }
 
     [SwaggerOperation(Summary = "Player stats by id and type")]

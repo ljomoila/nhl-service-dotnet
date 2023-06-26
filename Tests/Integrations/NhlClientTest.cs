@@ -4,6 +4,7 @@ using nhl_service_dotnet;
 using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Integrations;
 using Microsoft.Extensions.Logging;
+using nhl_service_dotnet.Models;
 
 namespace Tests.Integrations
 {
@@ -60,6 +61,56 @@ namespace Tests.Integrations
 
             // Assert
             Assert.Equal("No teams found from response", ex.Result.Message);
+        }
+
+        [Fact]
+        public async void TestGetPlayer_Success()
+        {
+            // Arrange
+            string response =
+                "{\"copyright\":\"NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2023. All Rights Reserved.\",\"people\":[{\"id\":1,\"fullName\":\"Test Player\",\"link\":\"/api/v1/people/1\",\"firstName\":\"Test\",\"lastName\":\"Player\",\"primaryNumber\":\"37\",\"birthDate\":\"1996-04-01\",\"currentAge\":27,\"birthCity\":\"Markham\",\"birthStateProvince\":\"ON\",\"birthCountry\":\"FIN\",\"nationality\":\"FIN\",\"height\":\"6' 2\\\"\",\"weight\":198,\"active\":true,\"alternateCaptain\":false,\"captain\":false,\"rookie\":false,\"shootsCatches\":\"L\",\"rosterStatus\":\"Y\",\"currentTeam\":{\"id\":22,\"name\":\"Edmonton Oilers\",\"link\":\"/api/v1/teams/22\"},\"primaryPosition\":{\"code\":\"L\",\"name\":\"Left Wing\",\"type\":\"Forward\",\"abbreviation\":\"LW\"}}]}";
+            HttpClient httpClient = TestHelper.CreateHttpClient(response, HttpStatusCode.OK);
+
+            // Act
+            Player? player = await CreateClient(httpClient).GetPlayer(1);
+
+            // Assert
+            Assert.NotNull(player);
+            Assert.Equal("Test Player", player.fullName);
+        }
+
+        [Fact]
+        public void TestGetPlayer_ThrowsInvalidStatus()
+        {
+            // Arrange
+            HttpStatusCode expectedStatus = HttpStatusCode.BadRequest;
+            HttpClient httpClient = TestHelper.CreateHttpClient("{}", expectedStatus);
+
+            // Act
+            var ex = Assert.ThrowsAsync<NhlException>(
+                async () => await CreateClient(httpClient).GetPlayer(It.IsAny<int>())
+            );
+
+            // Assert
+            Assert.Contains("Failed to get player", ex.Result.Message);
+            Assert.Equal(expectedStatus, ex.Result.StatusCode);
+        }
+
+        [Fact]
+        public void TestGetPlayer_ThrowsInvalidResponse()
+        {
+            // Arrange
+            string response =
+                "{\"copyright\":\"NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2023. All Rights Reserved.\",\"teamss\":[]}";
+            HttpClient httpClient = TestHelper.CreateHttpClient(response, HttpStatusCode.OK);
+
+            // Act
+            var ex = Assert.ThrowsAsync<NhlException>(
+                async () => await CreateClient(httpClient).GetPlayer(It.IsAny<int>())
+            );
+
+            // Assert
+            Assert.Contains("No player found from response with id", ex.Result.Message);
         }
 
         private NhlClient CreateClient(HttpClient client)

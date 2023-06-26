@@ -10,7 +10,7 @@ builder.Services.AddControllers();
 
 builder.Services.AddScoped<INhlService, NhlService>();
 
-builder.Services.AddTransient<INhlClient, NhlClient>();
+builder.Services.AddSingleton<INhlClient, NhlClient>();
 builder.Services.AddHttpClient("INhlClient");
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -25,7 +25,7 @@ builder.Services.AddSwaggerGen(s =>
         {
             Version = "v1",
             Title = "NHL service",
-            Description = "Middleman service between free NHL api and NHL React Native app"
+            Description = "Middleman service between free NHL api and NHL React Native app (235)"
         }
     );
 });

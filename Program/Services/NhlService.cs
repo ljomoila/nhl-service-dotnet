@@ -1,6 +1,7 @@
 using System.Net;
 using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Integrations;
+using nhl_service_dotnet.Models;
 
 namespace nhl_service_dotnet.Services
 {
@@ -23,6 +24,18 @@ namespace nhl_service_dotnet.Services
             }
 
             return teams;
+        }
+
+        public async Task<Player> GetPlayer(int id)
+        {
+            Player player = await client.GetPlayer(id);
+
+            if (player == null)
+            {
+                throw new NhlException("No player found with id: " + id, HttpStatusCode.NotFound);
+            }
+
+            return player;
         }
     }
 }

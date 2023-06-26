@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Newtonsoft.Json;
 using nhl_service_dotnet.Exceptions;
 using System.Net;
+using nhl_service_dotnet.Models;
 
 namespace nhl_service_dotnet.Integrations
 {
@@ -53,6 +54,49 @@ namespace nhl_service_dotnet.Integrations
             catch (Exception e)
             {
                 logger.LogError("Failed to get teams, error: " + e.Message);
+                throw;
+            }
+        }
+
+        public async Task<Player?> GetPlayer(int id)
+        {
+            // /api/v1/people/8477998
+            // /api/v1/people/8481033
+            // /api/v1/people/8477970
+
+            try
+            {
+                HttpResponseMessage response = await httpClient.GetAsync(
+                    ConstructUrlWithPath("/people/" + id)
+                );
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new NhlException(
+                        "Failed to get player with id: " + id,
+                        response.StatusCode
+                    );
+                }
+
+                var result = JsonConvert.DeserializeObject<Dictionary<string, Object>>(
+                    response.Content.ReadAsStringAsync().Result
+                );
+
+                if (result == null || !result.ContainsKey("people"))
+                {
+                    throw new NhlException(
+                        "No player found from response with id: " + id,
+                        HttpStatusCode.NotFound
+                    );
+                }
+
+                string playerJson = JsonConvert.SerializeObject(result["people"]);
+
+                return JsonConvert.DeserializeObject<List<Player>>(playerJson)[0];
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to get player, error: " + e.Message);
                 throw;
             }
         }

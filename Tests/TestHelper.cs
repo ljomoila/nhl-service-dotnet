@@ -2,6 +2,7 @@ using System.Net;
 using Moq;
 using Moq.Protected;
 using nhl_service_dotnet;
+using nhl_service_dotnet.Models;
 
 namespace Tests
 {
@@ -18,6 +19,18 @@ namespace Tests
             teams.Add(team);
 
             return teams;
+        }
+
+        public static Player GetPlayer(int id)
+        {
+            Player player = new Player();
+            player.id = id;
+            player.fullName = "Test Player";
+            player.lastName = "Player";
+            player.link = "/api/v1/people/1";
+            player.nationality = "FIN";
+
+            return player;
         }
 
         public static HttpClient CreateHttpClient(string response, HttpStatusCode status)
