@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using nhl_service_dotnet.Exceptions;
 using System.Net;
 using nhl_service_dotnet.Models;
+using nhl_service_dotnet.Models.Game;
+using Newtonsoft.Json.Linq;
 
 namespace nhl_service_dotnet.Integrations
 {
@@ -60,10 +62,6 @@ namespace nhl_service_dotnet.Integrations
 
         public async Task<Player?> GetPlayer(int id)
         {
-            // /api/v1/people/8477998
-            // /api/v1/people/8481033
-            // /api/v1/people/8477970
-
             try
             {
                 HttpResponseMessage response = await httpClient.GetAsync(
@@ -99,6 +97,62 @@ namespace nhl_service_dotnet.Integrations
                 logger.LogError("Failed to get player, error: " + e.Message);
                 throw;
             }
+        }
+
+        public async Task<List<string>> GetScheduleGamesByDate(string date)
+        {
+            try
+            {
+                HttpResponseMessage response = await httpClient.GetAsync(
+                    ConstructUrlWithPath("/schedule?date=" + date)
+                );
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new NhlException(
+                        "Failed to get games for the date: " + date,
+                        response.StatusCode
+                    );
+                }
+
+                JObject? result = JsonConvert.DeserializeObject<JObject>(
+                    response.Content.ReadAsStringAsync().Result
+                );
+
+                JArray games = (JArray)(result.SelectToken("dates[0].games"));
+
+                List<string> gamePaths = new List<string>();
+                foreach (JObject entry in games)
+                {
+                    gamePaths.Add(entry.SelectToken("link").ToString());
+                }
+
+                return gamePaths;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to get scheduled games, error: " + e.Message);
+                throw;
+            }
+        }
+
+        public async Task<LiveFeed?> GetLiveFeed(string gamePath)
+        {
+            HttpResponseMessage response = await httpClient.GetAsync(
+                ConstructUrlWithPath(gamePath)
+            );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new NhlException(
+                    "Failed to get live feed for the game: " + gamePath,
+                    response.StatusCode
+                );
+            }
+
+            return JsonConvert.DeserializeObject<LiveFeed>(
+                response.Content.ReadAsStringAsync().Result
+            );
         }
 
         private static string ConstructUrlWithPath(string path)

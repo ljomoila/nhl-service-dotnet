@@ -81,7 +81,7 @@ namespace Tests.Services
         public void TestGetPlayer_ThrowsPlayerNull()
         {
             // Arrange
-            Player expectedPlayer = null;
+            Player? expectedPlayer = null;
             client.Setup(x => x.GetPlayer(It.IsAny<int>())).ReturnsAsync(expectedPlayer);
 
             // Act

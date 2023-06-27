@@ -5,6 +5,7 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Models;
+using nhl_service_dotnet.Models.Game;
 
 namespace nhl_service_dotnet.Controllers;
 
@@ -44,12 +45,12 @@ public class NhlController : ControllerBase
         throw new NotImplementedException("Get player stats has not been implemented yet");
     }
 
-    [SwaggerOperation(Summary = "All scheduled games with stats by date")]
+    [SwaggerOperation(Summary = "All scheduled games and stats by date")]
     [HttpGet]
     [Route("games/{date}")]
-    public string GetGames(string date)
+    public async Task<List<Game>> GetGames(string date)
     {
-        throw new NotImplementedException("Get games has not been implemented yet");
+        return await service.GetGames(date);
     }
 
     [ApiExplorerSettings(IgnoreApi = true)]

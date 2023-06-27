@@ -2,6 +2,7 @@ using System.Net;
 using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Integrations;
 using nhl_service_dotnet.Models;
+using nhl_service_dotnet.Models.Game;
 
 namespace nhl_service_dotnet.Services
 {
@@ -28,7 +29,7 @@ namespace nhl_service_dotnet.Services
 
         public async Task<Player> GetPlayer(int id)
         {
-            Player player = await client.GetPlayer(id);
+            Player? player = await client.GetPlayer(id);
 
             if (player == null)
             {
@@ -36,6 +37,37 @@ namespace nhl_service_dotnet.Services
             }
 
             return player;
+        }
+
+        public async Task<List<Game>> GetGames(string date)
+        {
+            List<String> gamePaths = await client.GetScheduleGamesByDate(date);
+
+            foreach (string path in gamePaths)
+            {
+                LiveFeed? liveFeed = await client.GetLiveFeed(path);
+
+                if (liveFeed == null)
+                {
+                    throw new NhlException(
+                        "No live feed found for path: " + path,
+                        HttpStatusCode.NotFound
+                    );
+                }
+            }
+
+            List<Game> games = new List<Game>();
+
+            return games;
+        }
+
+        private async Task<List<Game>> ConstructGames(LiveFeed feed)
+        {
+            List<Team> teams = await this.GetTeams();
+
+            // TODO: actual game(s) constructing
+
+            return new List<Game>();
         }
     }
 }
