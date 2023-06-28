@@ -121,6 +121,9 @@ namespace nhl_service_dotnet.Integrations
 
                 JArray games = (JArray)(result.SelectToken("dates[0].games"));
 
+                if (games == null)
+                    return new List<string>();
+
                 List<string> gamePaths = new List<string>();
                 foreach (JObject entry in games)
                 {
