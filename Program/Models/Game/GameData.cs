@@ -2,6 +2,6 @@ namespace nhl_service_dotnet.Models.Game
 {
     public class GameData
     {
-        public Status status { get; set; }
+        public Status? status { get; set; }
     }
 }

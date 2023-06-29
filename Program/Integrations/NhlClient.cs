@@ -31,20 +31,9 @@ namespace nhl_service_dotnet.Integrations
         {
             try
             {
-                HttpResponseMessage response = await httpClient.GetAsync(
-                    ConstructUrlWithPath("/teams")
-                );
+                JObject result = await this.DoGet(ConstructUrlWithPath("/teams"));
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new NhlException("Failed to get teams", response.StatusCode);
-                }
-
-                var result = JsonConvert.DeserializeObject<Dictionary<string, Object>>(
-                    response.Content.ReadAsStringAsync().Result
-                );
-
-                if (result == null || !result.ContainsKey("teams"))
+                if (!result.ContainsKey("teams"))
                 {
                     throw new NhlException("No teams found from response", HttpStatusCode.NotFound);
                 }
@@ -64,29 +53,7 @@ namespace nhl_service_dotnet.Integrations
         {
             try
             {
-                HttpResponseMessage response = await httpClient.GetAsync(
-                    ConstructUrlWithPath("/people/" + id)
-                );
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new NhlException(
-                        "Failed to get player with id: " + id,
-                        response.StatusCode
-                    );
-                }
-
-                var result = JsonConvert.DeserializeObject<Dictionary<string, Object>>(
-                    response.Content.ReadAsStringAsync().Result
-                );
-
-                if (result == null || !result.ContainsKey("people"))
-                {
-                    throw new NhlException(
-                        "No player found from response with id: " + id,
-                        HttpStatusCode.NotFound
-                    );
-                }
+                JObject? result = await this.DoGet(ConstructUrlWithPath("/people/" + id));
 
                 string playerJson = JsonConvert.SerializeObject(result["people"]);
 
@@ -103,26 +70,14 @@ namespace nhl_service_dotnet.Integrations
         {
             try
             {
-                HttpResponseMessage response = await httpClient.GetAsync(
-                    ConstructUrlWithPath("/schedule?date=" + date)
-                );
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    throw new NhlException(
-                        "Failed to get games for the date: " + date,
-                        response.StatusCode
-                    );
-                }
-
-                JObject? result = JsonConvert.DeserializeObject<JObject>(
-                    response.Content.ReadAsStringAsync().Result
-                );
+                JObject? result = await this.DoGet(ConstructUrlWithPath("/schedule?date=" + date));
 
                 JArray games = (JArray)(result.SelectToken("dates[0].games"));
 
                 if (games == null)
+                {
                     return new List<string>();
+                }
 
                 List<string> gamePaths = new List<string>();
                 foreach (JObject entry in games)
@@ -141,21 +96,41 @@ namespace nhl_service_dotnet.Integrations
 
         public async Task<LiveFeed?> GetLiveFeed(string gamePath)
         {
-            HttpResponseMessage response = await httpClient.GetAsync(
-                ConstructUrlWithPath(gamePath)
-            );
+            try
+            {
+                JObject? result = await this.DoGet(ConstructUrlWithPath(gamePath));
+
+                return result.ToObject<LiveFeed>();
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to get live feed, error: " + e.Message);
+                throw;
+            }
+        }
+
+        private async Task<JObject> DoGet(string url)
+        {
+            HttpResponseMessage response = await httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
             {
+                throw new NhlException("Invalid response from " + url, response.StatusCode);
+            }
+
+            JObject? result = JsonConvert.DeserializeObject<JObject>(
+                response.Content.ReadAsStringAsync().Result
+            );
+
+            if (result == null)
+            {
                 throw new NhlException(
-                    "Failed to get live feed for the game: " + gamePath,
-                    response.StatusCode
+                    "Could not parse result from response, url: " + url,
+                    HttpStatusCode.NoContent
                 );
             }
 
-            return JsonConvert.DeserializeObject<LiveFeed>(
-                response.Content.ReadAsStringAsync().Result
-            );
+            return result;
         }
 
         private static string ConstructUrlWithPath(string path)

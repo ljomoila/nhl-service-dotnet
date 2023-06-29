@@ -5,6 +5,7 @@ using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Integrations;
 using Microsoft.Extensions.Logging;
 using nhl_service_dotnet.Models;
+using nhl_service_dotnet.Models.Game;
 
 namespace Tests.Integrations
 {
@@ -80,23 +81,6 @@ namespace Tests.Integrations
         }
 
         [Fact]
-        public void TestGetPlayer_ThrowsInvalidStatus()
-        {
-            // Arrange
-            HttpStatusCode expectedStatus = HttpStatusCode.BadRequest;
-            HttpClient httpClient = TestHelper.CreateHttpClient("{}", expectedStatus);
-
-            // Act
-            var ex = Assert.ThrowsAsync<NhlException>(
-                async () => await CreateClient(httpClient).GetPlayer(It.IsAny<int>())
-            );
-
-            // Assert
-            Assert.Contains("Failed to get player", ex.Result.Message);
-            Assert.Equal(expectedStatus, ex.Result.StatusCode);
-        }
-
-        [Fact]
         public void TestGetPlayer_ThrowsInvalidResponse()
         {
             // Arrange
@@ -111,6 +95,57 @@ namespace Tests.Integrations
 
             // Assert
             Assert.Contains("No player found from response with id", ex.Result.Message);
+        }
+
+        [Fact]
+        public async void TestGetScheduleGamesByDate_Success()
+        {
+            // Arrange
+            string response =
+                "{\"copyright\":\"NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2023. All Rights Reserved.\",\"totalItems\":1,\"totalEvents\":0,\"totalGames\":1,\"totalMatches\":0,\"metaData\":{\"timeStamp\":\"20230629_081825\"},\"wait\":10,\"dates\":[{\"date\":\"2023-05-08\",\"totalItems\":1,\"totalEvents\":0,\"totalGames\":1,\"totalMatches\":0,\"games\":[{\"gamePk\":2022030243,\"link\":\"/api/v1/game/2022030243/feed/live\",\"gameType\":\"P\",\"season\":\"20222023\",\"gameDate\":\"2023-05-09T00:30:00Z\",\"status\":{\"abstractGameState\":\"Final\",\"codedGameState\":\"7\",\"detailedState\":\"Final\",\"statusCode\":\"7\",\"startTimeTBD\":false},\"teams\":{\"away\":{\"leagueRecord\":{\"wins\":6,\"losses\":2,\"type\":\"league\"},\"score\":5,\"team\":{\"id\":54,\"name\":\"Vegas Golden Knights\",\"link\":\"/api/v1/teams/54\"}},\"home\":{\"leagueRecord\":{\"wins\":5,\"losses\":4,\"type\":\"league\"},\"score\":1,\"team\":{\"id\":22,\"name\":\"Edmonton Oilers\",\"link\":\"/api/v1/teams/22\"}}},\"venue\":{\"id\":5100,\"name\":\"Rogers Place\",\"link\":\"/api/v1/venues/5100\"},\"content\":{\"link\":\"/api/v1/game/2022030243/content\"}}],\"events\":[],\"matches\":[]}]}";
+            HttpClient httpClient = TestHelper.CreateHttpClient(response, HttpStatusCode.OK);
+
+            // Act
+            List<string> gamePaths = await CreateClient(httpClient)
+                .GetScheduleGamesByDate("2023-05-08");
+
+            // Assert
+            Assert.NotNull(gamePaths);
+            Assert.Equal(1, gamePaths.Count);
+        }
+
+        [Fact]
+        public async void TestGetScheduleGamesByDate_NoGames()
+        {
+            // Arrange
+            string response =
+                "{\"copyright\":\"NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2023. All Rights Reserved.\",\"totalItems\":1,\"totalEvents\":0,\"totalGames\":1,\"totalMatches\":0,\"metaData\":{\"timeStamp\":\"20230629_081825\"},\"wait\":10,\"dates\":[{\"date\":\"2023-05-08\",\"totalItems\":1,\"totalEvents\":0,\"totalGames\":1,\"totalMatches\":0,\"games\":[],\"events\":[],\"matches\":[]}]}";
+            HttpClient httpClient = TestHelper.CreateHttpClient(response, HttpStatusCode.OK);
+
+            // Act
+            List<string> gamePaths = await CreateClient(httpClient)
+                .GetScheduleGamesByDate("2023-05-08");
+
+            // Assert
+            Assert.NotNull(gamePaths);
+            Assert.Equal(0, gamePaths.Count);
+        }
+
+        [Fact]
+        public async void TestGetLiveFeed_Success()
+        {
+            // Arrange
+            string response =
+                "{\"copyright\":\"NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2023. All Rights Reserved.\",\"totalItems\":1,\"totalEvents\":0,\"totalGames\":1,\"totalMatches\":0,\"metaData\":{\"timeStamp\":\"20230629_081825\"},\"wait\":10,\"dates\":[{\"date\":\"2023-05-08\",\"totalItems\":1,\"totalEvents\":0,\"totalGames\":1,\"totalMatches\":0,\"games\":[{\"gamePk\":2022030243,\"link\":\"/api/v1/game/2022030243/feed/live\",\"gameType\":\"P\",\"season\":\"20222023\",\"gameDate\":\"2023-05-09T00:30:00Z\",\"status\":{\"abstractGameState\":\"Final\",\"codedGameState\":\"7\",\"detailedState\":\"Final\",\"statusCode\":\"7\",\"startTimeTBD\":false},\"teams\":{\"away\":{\"leagueRecord\":{\"wins\":6,\"losses\":2,\"type\":\"league\"},\"score\":5,\"team\":{\"id\":54,\"name\":\"Vegas Golden Knights\",\"link\":\"/api/v1/teams/54\"}},\"home\":{\"leagueRecord\":{\"wins\":5,\"losses\":4,\"type\":\"league\"},\"score\":1,\"team\":{\"id\":22,\"name\":\"Edmonton Oilers\",\"link\":\"/api/v1/teams/22\"}}},\"venue\":{\"id\":5100,\"name\":\"Rogers Place\",\"link\":\"/api/v1/venues/5100\"},\"content\":{\"link\":\"/api/v1/game/2022030243/content\"}}],\"events\":[],\"matches\":[]}]}";
+            HttpClient httpClient = TestHelper.CreateHttpClient(response, HttpStatusCode.OK);
+
+            // Act
+            LiveFeed? feed = await CreateClient(httpClient)
+                .GetLiveFeed("/api/v1/game/2022030243/feed/live");
+
+            // Assert
+            Assert.NotNull(feed);
+            //Assert.Equal(1, gamePaths.Count);
         }
 
         private NhlClient CreateClient(HttpClient client)
