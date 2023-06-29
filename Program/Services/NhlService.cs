@@ -42,6 +42,7 @@ namespace nhl_service_dotnet.Services
         public async Task<List<Game>> GetGames(string date)
         {
             List<String> gamePaths = await client.GetScheduleGamesByDate(date);
+            List<Game> games = new List<Game>();
 
             foreach (string path in gamePaths)
             {
@@ -54,20 +55,20 @@ namespace nhl_service_dotnet.Services
                         HttpStatusCode.NotFound
                     );
                 }
-            }
 
-            List<Game> games = new List<Game>();
+                games.Add(await this.ConstructGame(liveFeed));
+            }
 
             return games;
         }
 
-        private async Task<List<Game>> ConstructGames(LiveFeed feed)
+        private async Task<Game> ConstructGame(LiveFeed feed)
         {
             List<Team> teams = await this.GetTeams();
 
-            // TODO: actual game(s) constructing
+            // TODO: actual game constructing
 
-            return new List<Game>();
+            return new Game();
         }
     }
 }
