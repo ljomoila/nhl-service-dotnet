@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using nhl_service_dotnet;
 using nhl_service_dotnet.Exceptions;
@@ -13,10 +14,11 @@ namespace Tests.Services
         private NhlService service;
 
         private Mock<INhlClient> client = new Mock<INhlClient>();
+        private Mock<IMemoryCache> memoryCache = new Mock<IMemoryCache>();
 
         public NhlServiceTest()
         {
-            service = new NhlService(client.Object);
+            service = new NhlService(client.Object, memoryCache.Object);
         }
 
         [Fact]
@@ -31,6 +33,27 @@ namespace Tests.Services
 
             // Assert
             Assert.Equal(expectedTeams, teams);
+        }
+
+        [Fact]
+        public async void TestGetTeams_FromCache()
+        {
+            // Arrange
+            object expectedTeams = TestHelper.GetTeams();
+            var mockMemoryCache = new Mock<IMemoryCache>();
+            mockMemoryCache
+                .Setup(x => x.TryGetValue(It.IsAny<object>(), out expectedTeams))
+                .Returns(true);
+
+            // Act
+            List<Team> teams = await new NhlService(
+                client.Object,
+                mockMemoryCache.Object
+            ).GetTeams();
+
+            // Assert
+            Assert.Equal(expectedTeams, teams);
+            client.Verify(client => client.GetTeams(), Times.Never());
         }
 
         [Fact]
@@ -92,6 +115,15 @@ namespace Tests.Services
             // Assert
             Assert.Contains("No player found with id", ex.Result.Message);
             Assert.Equal(HttpStatusCode.NotFound, ex.Result.StatusCode);
+        }
+
+        public static IMemoryCache GetMemoryCache(object expectedValue)
+        {
+            var mockMemoryCache = new Mock<IMemoryCache>();
+            mockMemoryCache
+                .Setup(x => x.TryGetValue(It.IsAny<object>(), out expectedValue))
+                .Returns(true);
+            return mockMemoryCache.Object;
         }
     }
 }

@@ -5,7 +5,7 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
+builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<INhlService, NhlService>();
