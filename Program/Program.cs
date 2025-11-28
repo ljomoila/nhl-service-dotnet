@@ -1,14 +1,25 @@
 using nhl_service_dotnet.Services;
 using nhl_service_dotnet.Integrations;
 using Microsoft.OpenApi.Models;
+using nhl_service_dotnet;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+var httpsPort = builder.Configuration.GetValue<int?>("ASPNETCORE_HTTPS_PORT");
 
 // Add services to the container.
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
+builder.Services.AddOptions();
+builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("AppSettings"));
+if (httpsPort.HasValue)
+{
+    builder.Services.AddHttpsRedirection(options => { options.HttpsPort = httpsPort.Value; });
+}
 
-builder.Services.AddScoped<INhlService, NhlService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<IPlayerService, PlayerService>();
+builder.Services.AddScoped<IGameService, GameService>();
 
 builder.Services.AddSingleton<INhlClient, NhlClient>();
 builder.Services.AddHttpClient("INhlClient");
@@ -25,7 +36,7 @@ builder.Services.AddSwaggerGen(s =>
         {
             Version = "v1",
             Title = "NHL service",
-            Description = "Middleman service between free NHL api and NHL React Native app (235)"
+            Description = "Business service between free NHL api and NHL clients (235)"
         }
     );
 });
@@ -39,9 +50,29 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (httpsPort.HasValue)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseExceptionHandler("/error");
+
+app.Use(async (context, next) =>
+{
+    var options = context.RequestServices.GetRequiredService<IOptions<AppSettings>>().Value;
+
+    if (!string.IsNullOrWhiteSpace(options.ApiKeyValue))
+    {
+        if (!context.Request.Headers.TryGetValue(options.ApiKeyName, out var provided) || provided != options.ApiKeyValue)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized");
+            return;
+        }
+    }
+
+    await next();
+});
 
 app.UseAuthorization();
 

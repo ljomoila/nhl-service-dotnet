@@ -7,5 +7,12 @@ namespace nhl_service_dotnet.Models
         public string? lastName { get; set; }
         public string? nationality { get; set; }
         public string? link { get; set; }
+        public PlayerType playerType { get; set; } = PlayerType.Skater;
+    }
+
+    public enum PlayerType
+    {
+        Skater,
+        Goalie
     }
 }

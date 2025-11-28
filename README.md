@@ -5,19 +5,19 @@ Purpose of the service is to map data from NHL api to more usable form for the c
 
 ## Development
 
-Make sure you have .NET version 7 or higher intalled.
+Make sure you have .NET version 7 or higher installed.
 
 ### Run
 
--   `cd Program`
--   `dotnet run` - Runs the application and you can then test it in `http://localhost:5069/{route}`
--   `dotnet watch run` - Runs the application, watches changes and opens Swagger documentation in `http://localhost:5069/swagger/index.html`
+- `cd Program`
+- `dotnet run` - Runs the application and you can then test it in `http://localhost:5069/{route}`
+- `dotnet watch run` - Runs the application, watches changes and opens Swagger documentation in `http://localhost:5069/swagger/index.html`
 
 ### Build
 
--   `dotnet build` - Builds project
+- `dotnet build` - Builds project
 
 ### Test
 
--   `cd Tests`
--   `dotnet test` - Runs tests
+- `cd Tests`
+- `dotnet test` - Runs tests

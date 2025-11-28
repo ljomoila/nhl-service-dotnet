@@ -6,20 +6,14 @@ using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Integrations;
 using nhl_service_dotnet.Models;
 using nhl_service_dotnet.Services;
+using Microsoft.Extensions.Options;
 
 namespace Tests.Services
 {
     public class NhlServiceTest
     {
-        private NhlService service;
-
         private Mock<INhlClient> client = new Mock<INhlClient>();
         private Mock<IMemoryCache> memoryCache = new Mock<IMemoryCache>();
-
-        public NhlServiceTest()
-        {
-            service = new NhlService(client.Object, memoryCache.Object);
-        }
 
         [Fact]
         public async void TestGetTeams_Success()
@@ -29,7 +23,7 @@ namespace Tests.Services
             client.Setup(x => x.GetTeams()).ReturnsAsync(expectedTeams);
 
             // Act
-            List<Team> teams = await service.GetTeams();
+            List<Team> teams = await new TeamService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetTeams();
 
             // Assert
             Assert.Equal(expectedTeams, teams);
@@ -42,14 +36,11 @@ namespace Tests.Services
             object expectedTeams = TestHelper.GetTeams();
             var mockMemoryCache = new Mock<IMemoryCache>();
             mockMemoryCache
-                .Setup(x => x.TryGetValue(It.IsAny<object>(), out expectedTeams))
+                .Setup(x => x.TryGetValue("Teams", out expectedTeams))
                 .Returns(true);
 
             // Act
-            List<Team> teams = await new NhlService(
-                client.Object,
-                mockMemoryCache.Object
-            ).GetTeams();
+            List<Team> teams = await new TeamService(client.Object, mockMemoryCache.Object, Options.Create(new AppSettings())).GetTeams();
 
             // Assert
             Assert.Equal(expectedTeams, teams);
@@ -63,7 +54,7 @@ namespace Tests.Services
             client.Setup(x => x.GetTeams()).ReturnsAsync(new List<Team>());
 
             // Act
-            var ex = Assert.ThrowsAsync<NhlException>(async () => await service.GetTeams());
+            var ex = Assert.ThrowsAsync<NhlException>(async () => await new TeamService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetTeams());
 
             // Assert
             Assert.Equal("No teams found", ex.Result.Message);
@@ -78,7 +69,7 @@ namespace Tests.Services
             client.Setup(x => x.GetTeams()).ReturnsAsync(expectedTeams);
 
             // Act
-            var ex = Assert.ThrowsAsync<NhlException>(async () => await service.GetTeams());
+            var ex = Assert.ThrowsAsync<NhlException>(async () => await new TeamService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetTeams());
 
             // Assert
             Assert.Equal("No teams found", ex.Result.Message);
@@ -94,7 +85,7 @@ namespace Tests.Services
             client.Setup(x => x.GetPlayer(1)).ReturnsAsync(expectedPlayer);
 
             // Act
-            Player player = await service.GetPlayer(id);
+            Player player = await new PlayerService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetPlayer(id);
 
             // Assert
             Assert.Equal(expectedPlayer, player);
@@ -109,7 +100,7 @@ namespace Tests.Services
 
             // Act
             var ex = Assert.ThrowsAsync<NhlException>(
-                async () => await service.GetPlayer(It.IsAny<int>())
+                async () => await new PlayerService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetPlayer(It.IsAny<int>())
             );
 
             // Assert

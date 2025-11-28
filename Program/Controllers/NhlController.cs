@@ -14,30 +14,34 @@ namespace nhl_service_dotnet.Controllers;
 [Route("/")]
 public class NhlController : ControllerBase
 {
-    private readonly INhlService service;
+    private readonly ITeamService teamService;
+    private readonly IPlayerService playerService;
+    private readonly IGameService gameService;
 
-    public NhlController(INhlService service)
+    public NhlController(ITeamService teamService, IPlayerService playerService, IGameService gameService)
     {
-        this.service = service;
+        this.teamService = teamService;
+        this.playerService = playerService;
+        this.gameService = gameService;
     }
 
-    [SwaggerOperation(Summary = "All teams")]
+    [SwaggerOperation(Summary = "Get teams")]
     [HttpGet]
     [Route("teams")]
     public async Task<List<Team>> GetTeams()
     {
-        return await service.GetTeams();
+        return await teamService.GetTeams();
     }
 
-    [SwaggerOperation(Summary = "Player by id")]
+    [SwaggerOperation(Summary = "Get player")]
     [HttpGet]
     [Route("player/{id}")]
     public async Task<Player> GetPlayer(int id)
     {
-        return await service.GetPlayer(id);
+        return await playerService.GetPlayer(id);
     }
 
-    [SwaggerOperation(Summary = "Player stats by id and type")]
+    [SwaggerOperation(Summary = "Get layer stats by type")]
     [HttpGet]
     [Route("player/{id}/stats/{type}")]
     public string GetPlayerStats(int id, string type)
@@ -45,12 +49,12 @@ public class NhlController : ControllerBase
         throw new NotImplementedException("Get player stats has not been implemented yet");
     }
 
-    [SwaggerOperation(Summary = "All scheduled games and stats by date")]
+    [SwaggerOperation(Summary = " Get scheduled games and stats by date")]
     [HttpGet]
     [Route("games/{date}")]
     public async Task<List<Game>> GetGames(string date)
     {
-        return await service.GetGames(date);
+        return await gameService.GetGames(date);
     }
 
     [ApiExplorerSettings(IgnoreApi = true)]
@@ -62,7 +66,9 @@ public class NhlController : ControllerBase
         var status = HttpStatusCode.InternalServerError;
 
         if (exception is NhlException)
+        {
             status = ((NhlException)exception).StatusCode;
+        }
 
         return Problem(
             detail: exception.StackTrace,

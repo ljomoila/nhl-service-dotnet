@@ -12,7 +12,7 @@ namespace nhl_service_dotnet.Exceptions
         }
 
         public NhlException(string message)
-            : base() { }
+            : base(message) { }
 
         public NhlException(string message, HttpStatusCode status)
             : base(message)
