@@ -7,31 +7,32 @@ using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Integrations;
 using nhl_service_dotnet.Models;
 using nhl_service_dotnet.Models.Game;
+using System.Reflection.Metadata.Ecma335;
 
 namespace nhl_service_dotnet.Services
 {
     public class GameService : ServiceBase, IGameService
     {
+        private readonly ILogger logger;
         private readonly INhlClient client;
         private readonly IMemoryCache cache;
         private readonly ITeamService teamService;
-        private readonly IPlayerService playerService;
         private readonly ITeamRosterService teamRosterService;
 
         public GameService(
+            ILogger<GameService> logger,
             INhlClient client,
             IMemoryCache cache,
             ITeamService teamService,
-            IPlayerService playerService,
             ITeamRosterService teamRosterService,
             IOptions<AppSettings>? settings = null
         )
             : base(settings)
         {
+            this.logger = logger;
             this.client = client;
             this.cache = cache;
             this.teamService = teamService;
-            this.playerService = playerService;
             this.teamRosterService = teamRosterService;
         }
 
@@ -113,7 +114,7 @@ namespace nhl_service_dotnet.Services
 
             int id = token.Value<int?>("id") ?? 0;
             Team? existing = teams.FirstOrDefault(t => t.id == id);
-            List<GamePlayer>? players = await MapPlayers(token["players"] as JArray, id, rosterMap);
+            List<GamePlayer>? players = await MapPlayers(token?["players"] as JArray, id, rosterMap);
 
             return new GameTeam()
             {
@@ -127,7 +128,7 @@ namespace nhl_service_dotnet.Services
             };
         }
 
-        private async Task<List<GamePlayer>?> MapPlayers(JArray? players, int teamId, Dictionary<int, List<Player>> rosterMap)
+        private Task<List<GamePlayer>?>? MapPlayers(JArray? players, int teamId, Dictionary<int, List<Player>> rosterMap)
         {
             if (players == null) return null;
 
@@ -138,17 +139,21 @@ namespace nhl_service_dotnet.Services
                 {
                     int goals = p.Value<int?>("goals") ?? 0;
                     int assists = p.Value<int?>("assists") ?? 0;
-                    return goals > 0 || assists > 0;
+                    double savePctg = p.Value<double?>("savePercentage") ?? 0;
+
+                    return goals > 0 || assists > 0 || savePctg > 0;
                 })
             )
             {
-                PlayerType type = Enum.TryParse<PlayerType>(p.Value<string?>("playerType"), true, out var parsed)
-                    ? parsed
+                PlayerType type = p.Value<string?>("position") == "G"
+                    ? PlayerType.Goalie
                     : PlayerType.Skater;
 
                 GamePlayer mapped;
                 if (type == PlayerType.Goalie)
                 {
+                    logger.LogInformation("Mapping goalie stats for player ID {PlayerId}", p.Value<int?>("id") ?? 0);
+
                     mapped = new GameGoalie()
                     {
                         id = p.Value<int?>("id") ?? 0,
@@ -159,8 +164,8 @@ namespace nhl_service_dotnet.Services
                         assists = p.Value<int?>("assists") ?? 0,
                         points = p.Value<int?>("points")?.ToString(),
                         playerType = type,
-                        saves = p.Value<int?>("saves") ?? 0,
-                        savePercentage = p.Value<double?>("savePercentage") ?? 0
+                        saveShotsAgainst = p.Value<string?>("saveShotsAgainst") ?? "0/0",
+                        savePercentage = Math.Round((p.Value<double?>("savePercentage") ?? 0) * 100, 0)
                     };
                 }
                 else
@@ -180,7 +185,9 @@ namespace nhl_service_dotnet.Services
 
                 int goals = mapped.goals;
                 int assists = mapped.assists;
-                if (mapped.id != 0 && (goals > 0 || assists > 0))
+                double? savePercentage = mapped is GameGoalie g ? g.savePercentage : 0;
+
+                if (mapped.id != 0 && (goals > 0 || assists > 0 || savePercentage > 0))
                 {
                     if (rosterMap.TryGetValue(teamId, out var roster))
                     {
@@ -196,7 +203,12 @@ namespace nhl_service_dotnet.Services
                 result.Add(mapped);
             }
 
-            return result;
+            var ordered = result
+                .OrderBy(r => r is GameGoalie ? 1 : 0)
+                .ThenByDescending(r => r.goals + r.assists)
+                .ToList();
+
+            return Task.FromResult<List<GamePlayer>?>(ordered);
         }
     }
 }
