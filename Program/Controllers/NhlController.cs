@@ -44,6 +44,15 @@ public class NhlController : ControllerBase
         return await teamRosterService.GetTeamsWithRosters();
     }
 
+    [SwaggerOperation(Summary = "Refresh teams and rosters from NHL API into database")]
+    [HttpPost]
+    [Route("teams/rosters/refresh")]
+    public async Task<IActionResult> RefreshTeamsWithRosters()
+    {
+        await teamRosterService.RefreshTeamsAndRosters();
+        return Ok(new { message = "Teams and rosters refreshed" });
+    }
+
     [SwaggerOperation(Summary = "Get player")]
     [HttpGet]
     [Route("players/{id}")]

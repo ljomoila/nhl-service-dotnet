@@ -15,10 +15,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
-
-      - name: Build .NET project
-        run: dotnet publish -c Release -o out
+          dotnet-version: "7.0.x"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -42,4 +39,6 @@ jobs:
             --image ${{ secrets.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ secrets.SERVICE_NAME }}:latest \
             --region ${{ secrets.REGION }} \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --set-env-vars ConnectionStrings__DefaultConnection=${{ secrets.DEFAULT_CONNECTION }} \
+            --set-env-vars AppSettings__ApiKeyValue=${{ secrets.API_KEY_VALUE }}

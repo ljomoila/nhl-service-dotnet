@@ -3,6 +3,8 @@ using nhl_service_dotnet.Integrations;
 using Microsoft.OpenApi.Models;
 using nhl_service_dotnet;
 using Microsoft.Extensions.Options;
+using nhl_service_dotnet.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var httpsPort = builder.Configuration.GetValue<int?>("ASPNETCORE_HTTPS_PORT");
@@ -12,6 +14,8 @@ builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddOptions();
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("AppSettings"));
+builder.Services.AddDbContext<NhlDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 if (httpsPort.HasValue)
 {
     builder.Services.AddHttpsRedirection(options => { options.HttpsPort = httpsPort.Value; });
@@ -21,7 +25,6 @@ builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
 builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<ITeamRosterService, TeamRosterService>();
-
 builder.Services.AddSingleton<INhlClient, NhlClient>();
 builder.Services.AddHttpClient("INhlClient");
 
