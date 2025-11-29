@@ -40,5 +40,4 @@ jobs:
             --region ${{ secrets.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars ConnectionStrings__DefaultConnection=${{ secrets.DEFAULT_CONNECTION }} \
-            --set-env-vars AppSettings__ApiKeyValue=${{ secrets.API_KEY_VALUE }}
+            --set-env-vars="ConnectionStrings__DefaultConnection=${{ secrets.DEFAULT_CONNECTION }},AppSettings__ApiKeyValue=${{ secrets.API_KEY_VALUE }}"
