@@ -22,8 +22,6 @@
     <PackageReference Include="Moq" Version="4.18.4"/>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="nhl-service-dotnet">
-      <HintPath>../Program/bin/Debug/net7.0/nhl-service-dotnet.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\Program\nhl-service-dotnet.csproj" />
   </ItemGroup>
 </Project>

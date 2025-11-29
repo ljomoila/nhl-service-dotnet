@@ -122,7 +122,7 @@ namespace nhl_service_dotnet.Services
                 name = existing?.name ?? token.SelectToken("name.default")?.ToString()
                     ?? token.SelectToken("commonName.default")?.ToString(),
                 shortName = existing?.shortName ?? token.SelectToken("commonName.default")?.ToString(),
-                abbreviation = existing?.abbreviation ?? token.Value<string>("abbrev"),
+                abbreviation = existing?.abbreviation ?? token.Value<string?>("abbrev") ?? string.Empty,
                 goals = token.Value<int?>("score") ?? 0,
                 players = players
             };
