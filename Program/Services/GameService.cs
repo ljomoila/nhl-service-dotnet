@@ -119,11 +119,11 @@ namespace nhl_service_dotnet.Services
             return new GameTeam()
             {
                 id = id,
-                name = existing?.name ?? token.SelectToken("name.default")?.ToString()
-                    ?? token.SelectToken("commonName.default")?.ToString(),
-                shortName = existing?.shortName ?? token.SelectToken("commonName.default")?.ToString(),
-                abbreviation = existing?.abbreviation ?? token.Value<string?>("abbrev") ?? string.Empty,
-                goals = token.Value<int?>("score") ?? 0,
+                name = existing?.name ?? token!.SelectToken("name.default")?.ToString()
+                    ?? token!.SelectToken("commonName.default")?.ToString(),
+                shortName = existing?.shortName ?? token!.SelectToken("commonName.default")?.ToString(),
+                abbreviation = existing?.abbreviation ?? token!.Value<string?>("abbrev") ?? string.Empty,
+                goals = token!.Value<int?>("score") ?? 0,
                 players = players
             };
         }
@@ -234,14 +234,7 @@ namespace nhl_service_dotnet.Services
             }
 
             var ordered = result
-                .OrderBy(r =>
-                {
-                    if (r is GameGoalie g)
-                    {
-                        logger.LogInformation("Ordering player ID {PlayerId} of savePercentage {savePercentage}, saveShotsAgainst: {saveShotsAgainst}, ", g.id, g.savePercentage, g.saveShotsAgainst);
-                    }
-                    return r is GameGoalie ? 1 : 0;
-                })
+                .OrderBy(r => r is GameGoalie ? 1 : 0)
                 .ThenByDescending(r => r.goals + r.assists)
                 .ToList();
 
