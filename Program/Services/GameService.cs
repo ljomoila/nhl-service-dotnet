@@ -128,9 +128,9 @@ namespace nhl_service_dotnet.Services
             };
         }
 
-        private Task<List<GamePlayer>?>? MapPlayers(JArray? players, int teamId, Dictionary<int, List<Player>> rosterMap)
+        private Task<List<GamePlayer>?> MapPlayers(JArray? players, int teamId, Dictionary<int, List<Player>> rosterMap)
         {
-            if (players == null) return null;
+            if (players == null) return Task.FromResult<List<GamePlayer>?>(null);
 
             var result = new List<GamePlayer>();
 
@@ -139,20 +139,49 @@ namespace nhl_service_dotnet.Services
                 {
                     int goals = p.Value<int?>("goals") ?? 0;
                     int assists = p.Value<int?>("assists") ?? 0;
-                    double savePctg = p.Value<double?>("savePercentage") ?? 0;
+                    double savePctg = p.Value<double?>("savePercentage") ?? p.Value<double?>("savePctg") ?? 0;
+                    int saves = p.Value<int?>("saves") ?? 0;
 
-                    return goals > 0 || assists > 0 || savePctg > 0;
+                    return goals > 0 || assists > 0 || savePctg > 0 || saves > 0;
                 })
             )
             {
-                PlayerType type = p.Value<string?>("position") == "G"
+                string? positionToken = p.Value<string?>("position")
+                    ?? p.Value<string?>("positionCode")
+                    ?? p.Value<string?>("playerType");
+                PlayerType type = (!string.IsNullOrWhiteSpace(positionToken) && positionToken.ToUpperInvariant().StartsWith("G"))
                     ? PlayerType.Goalie
                     : PlayerType.Skater;
 
                 GamePlayer mapped;
                 if (type == PlayerType.Goalie)
                 {
-                    logger.LogInformation("Mapping goalie stats for player ID {PlayerId}", p.Value<int?>("id") ?? 0);
+                    int saves = p.Value<int?>("saves") ?? 0;
+                    int shotsAgainst = p.Value<int?>("shotsAgainst") ?? 0;
+                    string? saveShotsAgainst = p.Value<string?>("saveShotsAgainst");
+
+                    if (!string.IsNullOrWhiteSpace(saveShotsAgainst) && saveShotsAgainst.Contains('/'))
+                    {
+                        var parts = saveShotsAgainst.Split('/');
+                        int.TryParse(parts.ElementAtOrDefault(0), out saves);
+                        int.TryParse(parts.ElementAtOrDefault(1), out shotsAgainst);
+                    }
+                    else if (saves > 0 && shotsAgainst == 0)
+                    {
+                        shotsAgainst = saves;
+                        saveShotsAgainst = $"{saves}/{shotsAgainst}";
+                    }
+
+                    double rawSavePct = p.Value<double?>("savePercentage") ?? p.Value<double?>("savePctg") ?? 0;
+                    if (rawSavePct == 0 && double.TryParse(p.Value<string?>("savePctg"), out var parsedPct))
+                    {
+                        rawSavePct = parsedPct;
+                    }
+                    if (rawSavePct == 0 && shotsAgainst > 0)
+                    {
+                        rawSavePct = shotsAgainst == 0 ? 0 : (double)saves / shotsAgainst;
+                    }
+                    double savePctPercent = rawSavePct * 100;
 
                     mapped = new GameGoalie()
                     {
@@ -164,8 +193,9 @@ namespace nhl_service_dotnet.Services
                         assists = p.Value<int?>("assists") ?? 0,
                         points = p.Value<int?>("points")?.ToString(),
                         playerType = type,
-                        saveShotsAgainst = p.Value<string?>("saveShotsAgainst") ?? "0/0",
-                        savePercentage = Math.Round((p.Value<double?>("savePercentage") ?? 0) * 100, 0)
+                        saves = saves,
+                        saveShotsAgainst = saveShotsAgainst,
+                        savePercentage = Math.Round(savePctPercent, 1)
                     };
                 }
                 else
@@ -204,7 +234,14 @@ namespace nhl_service_dotnet.Services
             }
 
             var ordered = result
-                .OrderBy(r => r is GameGoalie ? 1 : 0)
+                .OrderBy(r =>
+                {
+                    if (r is GameGoalie g)
+                    {
+                        logger.LogInformation("Ordering player ID {PlayerId} of savePercentage {savePercentage}, saveShotsAgainst: {saveShotsAgainst}, ", g.id, g.savePercentage, g.saveShotsAgainst);
+                    }
+                    return r is GameGoalie ? 1 : 0;
+                })
                 .ThenByDescending(r => r.goals + r.assists)
                 .ToList();
 

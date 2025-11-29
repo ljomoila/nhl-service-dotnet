@@ -1,13 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
 using nhl_service_dotnet.Services;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Models;
 using nhl_service_dotnet.Models.Game;
-using nhl_service_dotnet.Models;
 
 namespace nhl_service_dotnet.Controllers;
 
@@ -38,14 +36,6 @@ public class NhlController : ControllerBase
         return await teamService.GetTeams();
     }
 
-    [SwaggerOperation(Summary = "Get player")]
-    [HttpGet]
-    [Route("player/{id}")]
-    public async Task<Player> GetPlayer(int id)
-    {
-        return await playerService.GetPlayer(id);
-    }
-
     [SwaggerOperation(Summary = "Get teams with rosters")]
     [HttpGet]
     [Route("teams/rosters")]
@@ -54,9 +44,17 @@ public class NhlController : ControllerBase
         return await teamRosterService.GetTeamsWithRosters();
     }
 
-    [SwaggerOperation(Summary = "Get layer stats by type")]
+    [SwaggerOperation(Summary = "Get player")]
     [HttpGet]
-    [Route("player/{id}/stats/{type}")]
+    [Route("players/{id}")]
+    public async Task<Player> GetPlayer(int id)
+    {
+        return await playerService.GetPlayer(id);
+    }
+
+    [SwaggerOperation(Summary = "Get player stats by type")]
+    [HttpGet]
+    [Route("players/{id}/stats/{type}")]
     public string GetPlayerStats(int id, string type)
     {
         throw new NotImplementedException("Get player stats has not been implemented yet");

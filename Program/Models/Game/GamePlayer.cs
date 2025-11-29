@@ -11,6 +11,7 @@ namespace nhl_service_dotnet.Models.Game
     public class GameGoalie : GamePlayer
     {
         public int saves { get; set; }
+        public string? saveShotsAgainst { get; set; }
         public double savePercentage { get; set; }
     }
 }

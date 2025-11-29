@@ -327,9 +327,9 @@ namespace nhl_service_dotnet.Integrations
                     fullName = fullName,
                     lastName = player.SelectToken("lastName.default")?.ToString()
                         ?? player.SelectToken("lastName")?.ToString(),
-                    nationality = player.Value<string?>("birthCountry")
-                        ?? player.SelectToken("birthCountry.default")?.ToString()
-                        ?? player.Value<string?>("nationality"),
+                    nationality = player.Value<string?>("birthCountry"),
+                    // ?? player.SelectToken("birthCountry.default")?.ToString()
+                    // ?? player.Value<string?>("nationality"),
                     link = player.Value<string?>("link") ?? player.Value<string?>("playerUrl"),
                     playerType = type
                 });
@@ -382,7 +382,7 @@ namespace nhl_service_dotnet.Integrations
 
                 if (type == PlayerType.Goalie)
                 {
-                    mapped["saves"] = player.Value<int?>("saves") ?? 0;
+                    mapped["saveShotsAgainst"] = player.Value<string?>("saveShotsAgainst") ?? "0/0";
                     mapped["savePercentage"] = player.Value<double?>("savePctg") ?? 0;
                 }
 
