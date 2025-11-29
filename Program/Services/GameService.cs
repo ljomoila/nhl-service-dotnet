@@ -16,12 +16,14 @@ namespace nhl_service_dotnet.Services
         private readonly IMemoryCache cache;
         private readonly ITeamService teamService;
         private readonly IPlayerService playerService;
+        private readonly ITeamRosterService teamRosterService;
 
         public GameService(
             INhlClient client,
             IMemoryCache cache,
             ITeamService teamService,
             IPlayerService playerService,
+            ITeamRosterService teamRosterService,
             IOptions<AppSettings>? settings = null
         )
             : base(settings)
@@ -30,6 +32,7 @@ namespace nhl_service_dotnet.Services
             this.cache = cache;
             this.teamService = teamService;
             this.playerService = playerService;
+            this.teamRosterService = teamRosterService;
         }
 
         public async Task<List<Game>> GetGames(string date)
@@ -40,12 +43,27 @@ namespace nhl_service_dotnet.Services
                 return cached;
             }
 
+            // Preload teams and rosters for enrichment
+            List<Team> teams = await this.teamService.GetTeams();
+            var rosters = await this.teamRosterService.GetTeamsWithRosters();
+            var rosterMap = rosters
+                .Where(r => r.team != null && r.players != null)
+                .ToDictionary(r => r.team!.id, r => r.players!);
+
             List<string> gamePaths = await client.GetScheduleGamesByDate(date);
             List<Game> games = new List<Game>();
 
             foreach (string path in gamePaths)
             {
-                LiveFeed? liveFeed = await client.GetLiveFeed(path);
+                string feedCacheKey = $"LiveFeed_{path}";
+                if (!cache.TryGetValue(feedCacheKey, out LiveFeed? liveFeed) || liveFeed == null)
+                {
+                    liveFeed = await client.GetLiveFeed(path);
+                    if (liveFeed != null)
+                    {
+                        cache.Set(feedCacheKey, liveFeed, TimeSpan.FromMinutes(1));
+                    }
+                }
 
                 if (liveFeed == null)
                 {
@@ -55,22 +73,20 @@ namespace nhl_service_dotnet.Services
                     );
                 }
 
-                games.Add(await ConstructGame(liveFeed));
+                games.Add(await ConstructGame(liveFeed, teams, rosterMap));
             }
 
             cache.Set(cacheKey, games, TimeSpan.FromSeconds(this.settings.Cache.GamesSeconds));
             return games;
         }
 
-        private async Task<Game> ConstructGame(LiveFeed feed)
+        private async Task<Game> ConstructGame(LiveFeed feed, List<Team> teams, Dictionary<int, List<Player>> rosterMap)
         {
-            List<Team> teams = await this.teamService.GetTeams();
-
             JToken? homeToken = feed.liveData?.linescore?.teams?["home"];
             JToken? awayToken = feed.liveData?.linescore?.teams?["away"];
 
-            GameTeam homeTeam = await BuildGameTeam(homeToken, teams);
-            GameTeam awayTeam = await BuildGameTeam(awayToken, teams);
+            GameTeam homeTeam = await BuildGameTeam(homeToken, teams, rosterMap);
+            GameTeam awayTeam = await BuildGameTeam(awayToken, teams, rosterMap);
 
             string? detailedState = feed.gameData?.status?.detailedState;
             GameStatus status = detailedState switch
@@ -91,13 +107,13 @@ namespace nhl_service_dotnet.Services
             };
         }
 
-        private async Task<GameTeam> BuildGameTeam(JToken? token, List<Team> teams)
+        private async Task<GameTeam> BuildGameTeam(JToken? token, List<Team> teams, Dictionary<int, List<Player>> rosterMap)
         {
             if (token == null) return new GameTeam();
 
             int id = token.Value<int?>("id") ?? 0;
             Team? existing = teams.FirstOrDefault(t => t.id == id);
-            List<GamePlayer>? players = await MapPlayers(token["players"] as JArray);
+            List<GamePlayer>? players = await MapPlayers(token["players"] as JArray, id, rosterMap);
 
             return new GameTeam()
             {
@@ -111,7 +127,7 @@ namespace nhl_service_dotnet.Services
             };
         }
 
-        private async Task<List<GamePlayer>?> MapPlayers(JArray? players)
+        private async Task<List<GamePlayer>?> MapPlayers(JArray? players, int teamId, Dictionary<int, List<Player>> rosterMap)
         {
             if (players == null) return null;
 
@@ -166,15 +182,14 @@ namespace nhl_service_dotnet.Services
                 int assists = mapped.assists;
                 if (mapped.id != 0 && (goals > 0 || assists > 0))
                 {
-                    try
+                    if (rosterMap.TryGetValue(teamId, out var roster))
                     {
-                        Player details = await playerService.GetPlayer(mapped.id);
-                        mapped.nationality = details?.nationality;
-                        mapped.link = details?.link;
-                    }
-                    catch
-                    {
-                        // swallow enrichment failures; base game stats still returned
+                        var details = roster.FirstOrDefault(r => r.id == mapped.id);
+                        if (details != null)
+                        {
+                            mapped.nationality = details.nationality;
+                            mapped.link = details.link;
+                        }
                     }
                 }
 

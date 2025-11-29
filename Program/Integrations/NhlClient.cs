@@ -41,20 +41,26 @@ namespace nhl_service_dotnet.Integrations
         {
             try
             {
-                string today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-                JObject result = await this.DoGet($"{apiBase}/scoreboard/{today}");
+                List<Team> teams = new List<Team>();
 
-                JArray gameDays = result["gamesByDate"] as JArray ?? new JArray();
-                Dictionary<int, Team> teams = new Dictionary<int, Team>();
+                // 1) standings for current season start
+                string seasonStart = $"{GetSeasonStartDate():yyyy-MM-dd}";
+                JObject standingsResult = await this.DoGet($"{apiBase}/standings/{seasonStart}");
+                AddTeamsFromStandings(standingsResult, teams);
 
-                foreach (JObject day in gameDays)
+                // 2) standings/now fallback
+                if (teams.Count == 0)
                 {
-                    JArray games = day["games"] as JArray ?? new JArray();
-                    foreach (JObject game in games)
-                    {
-                        AddTeamFromToken(teams, game["homeTeam"]);
-                        AddTeamFromToken(teams, game["awayTeam"]);
-                    }
+                    JObject nowStandings = await this.DoGet($"{apiBase}/standings/now");
+                    AddTeamsFromStandings(nowStandings, teams);
+                }
+
+                // 3) scoreboard fallback (today's games)
+                if (teams.Count == 0)
+                {
+                    string today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                    JObject scoreboard = await this.DoGet($"{apiBase}/scoreboard/{today}");
+                    AddTeamsFromScoreboard(scoreboard, teams);
                 }
 
                 if (teams.Count == 0)
@@ -62,7 +68,7 @@ namespace nhl_service_dotnet.Integrations
                     throw new NhlException("No teams found from response", HttpStatusCode.NotFound);
                 }
 
-                return teams.Values.ToList();
+                return teams;
             }
             catch (Exception e)
             {
@@ -118,16 +124,9 @@ namespace nhl_service_dotnet.Integrations
                         continue;
 
                     JArray games = day["games"] as JArray ?? new JArray();
-                    string[] allowedStates = new[] { "LIVE", "CRIT", "FINAL", "FUT", "PRE" };
 
                     foreach (JObject game in games)
                     {
-                        // string? state = game.Value<string>("gameState");
-                        // if (string.IsNullOrWhiteSpace(state) || !allowedStates.Contains(state.ToUpperInvariant()))
-                        // {
-                        //     continue;
-                        // }
-
                         string? id = game.Value<string>("id");
                         string? link = game.Value<string>("gameCenterLink");
 
@@ -189,50 +188,152 @@ namespace nhl_service_dotnet.Integrations
             }
         }
 
+        public async Task<List<Player>?> GetRoster(string teamAbbreviation)
+        {
+            try
+            {
+                JObject result = await DoGet($"{apiBase}/roster/{teamAbbreviation}/current");
+                JArray? roster = result["forwards"] as JArray;
+
+                // roster response can include forwards, defensemen, goalies
+                List<Player> players = new List<Player>();
+                AppendRosterGroup(players, result["forwards"] as JArray, PlayerType.Skater);
+                AppendRosterGroup(players, result["defensemen"] as JArray, PlayerType.Skater);
+                AppendRosterGroup(players, result["goalies"] as JArray, PlayerType.Goalie);
+
+                return players;
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to get roster for team {teamAbbreviation}", teamAbbreviation);
+                throw;
+            }
+        }
+
         private async Task<JObject> DoGet(string url)
         {
-            HttpResponseMessage response = await httpClient.GetAsync(url);
-
-            if (!response.IsSuccessStatusCode)
+            const int maxAttempts = 3;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
+                HttpResponseMessage response = await httpClient.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string content = await response.Content.ReadAsStringAsync();
+                    JObject? result = JsonConvert.DeserializeObject<JObject>(content);
+
+                    if (result == null)
+                    {
+                        throw new NhlException(
+                            "Could not parse result from response, url: " + url,
+                            HttpStatusCode.NoContent
+                        );
+                    }
+
+                    return result;
+                }
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxAttempts)
+                {
+                    int delay = response.Headers.RetryAfter?.Delta != null
+                        ? (int)response.Headers.RetryAfter.Delta.Value.TotalMilliseconds
+                        : 500 * attempt;
+                    await Task.Delay(delay);
+                    continue;
+                }
+
                 throw new NhlException(
                     $"Invalid response, url: {url}, status: {response.StatusCode}",
                     response.StatusCode
                 );
             }
 
-            string content = await response.Content.ReadAsStringAsync();
-            JObject? result = JsonConvert.DeserializeObject<JObject>(content);
-
-            if (result == null)
-            {
-                throw new NhlException(
-                    "Could not parse result from response, url: " + url,
-                    HttpStatusCode.NoContent
-                );
-            }
-
-            return result;
+            throw new NhlException($"Invalid response, url: {url}", HttpStatusCode.InternalServerError);
         }
 
-        private static void AddTeamFromToken(Dictionary<int, Team> teams, JToken? token)
+        private static DateTime GetSeasonStartDate()
+        {
+            DateTime now = DateTime.UtcNow;
+            int seasonStartMonth = 10; // October
+            int year = now.Month >= seasonStartMonth ? now.Year : now.Year - 1;
+            return new DateTime(year, seasonStartMonth, 1);
+        }
+
+        private static void AddTeamsFromStandings(JObject result, List<Team> teams)
+        {
+            JArray standings = result["standings"] as JArray ?? new JArray();
+            foreach (JObject entry in standings)
+            {
+                AddTeamFromToken(teams, entry);
+            }
+        }
+
+        private static void AddTeamsFromScoreboard(JObject result, List<Team> teams)
+        {
+            JArray gameDays = result["gamesByDate"] as JArray ?? new JArray();
+
+            foreach (JObject day in gameDays)
+            {
+                JArray games = day["games"] as JArray ?? new JArray();
+                foreach (JObject game in games)
+                {
+                    AddTeamFromToken(teams, game["homeTeam"]);
+                    AddTeamFromToken(teams, game["awayTeam"]);
+                }
+            }
+        }
+
+        private static void AddTeamFromToken(List<Team> teams, JToken? token)
         {
             if (token == null) return;
 
-            int id = token.Value<int?>("id") ?? 0;
-            if (id == 0 || teams.ContainsKey(id)) return;
+            int id = token.Value<int?>("teamId") ?? token.Value<int?>("id") ?? 0;
+            if (id == 0 || teams.Any(t => t.id == id)) return;
 
             Team team = new Team()
             {
                 id = id,
-                name = token.SelectToken("name.default")?.ToString()
+                name = token.SelectToken("teamName.default")?.ToString()
+                    ?? token.SelectToken("name.default")?.ToString()
                     ?? token.SelectToken("commonName.default")?.ToString(),
-                shortName = token.SelectToken("commonName.default")?.ToString(),
-                abbreviation = token.Value<string>("abbrev"),
-                link = token.Value<string>("link") ?? token.Value<string>("teamLink")
+                shortName = token.SelectToken("teamCommonName.default")?.ToString()
+                    ?? token.SelectToken("commonName.default")?.ToString(),
+                abbreviation = token.Value<string>("teamAbbrev") ?? token.Value<string>("abbrev"),
+                link = token.Value<string>("teamUrl") ?? token.Value<string>("link") ?? token.Value<string>("teamLink")
             };
 
-            teams.Add(id, team);
+            teams.Add(team);
+        }
+
+        private static void AppendRosterGroup(List<Player> players, JArray? group, PlayerType type)
+        {
+            if (group == null) return;
+
+            foreach (JObject player in group)
+            {
+                int id = player.Value<int?>("id") ?? player.Value<int?>("playerId") ?? 0;
+
+                string? fullName =
+                    player.SelectToken("fullName")?.ToString()
+                    ?? player.SelectToken("fullName.default")?.ToString()
+                    ?? $"{player.SelectToken("firstName") ?? player.SelectToken("firstName.default")} {player.SelectToken("lastName") ?? player.SelectToken("lastName.default")}"
+                        .Trim();
+
+                if (id == 0 || string.IsNullOrWhiteSpace(fullName)) continue;
+
+                players.Add(new Player()
+                {
+                    id = id,
+                    fullName = fullName,
+                    lastName = player.SelectToken("lastName.default")?.ToString()
+                        ?? player.SelectToken("lastName")?.ToString(),
+                    nationality = player.Value<string?>("birthCountry")
+                        ?? player.SelectToken("birthCountry.default")?.ToString()
+                        ?? player.Value<string?>("nationality"),
+                    link = player.Value<string?>("link") ?? player.Value<string?>("playerUrl"),
+                    playerType = type
+                });
+            }
         }
 
         private JObject BuildTeamToken(JToken? teamToken, JToken? statsToken)

@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using nhl_service_dotnet.Services;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 using nhl_service_dotnet.Exceptions;
 using nhl_service_dotnet.Models;
 using nhl_service_dotnet.Models.Game;
+using nhl_service_dotnet.Models;
 
 namespace nhl_service_dotnet.Controllers;
 
@@ -17,12 +19,15 @@ public class NhlController : ControllerBase
     private readonly ITeamService teamService;
     private readonly IPlayerService playerService;
     private readonly IGameService gameService;
+    private readonly ITeamRosterService teamRosterService;
 
-    public NhlController(ITeamService teamService, IPlayerService playerService, IGameService gameService)
+    [ActivatorUtilitiesConstructor]
+    public NhlController(ITeamService teamService, IPlayerService playerService, IGameService gameService, ITeamRosterService teamRosterService)
     {
         this.teamService = teamService;
         this.playerService = playerService;
         this.gameService = gameService;
+        this.teamRosterService = teamRosterService;
     }
 
     [SwaggerOperation(Summary = "Get teams")]
@@ -39,6 +44,14 @@ public class NhlController : ControllerBase
     public async Task<Player> GetPlayer(int id)
     {
         return await playerService.GetPlayer(id);
+    }
+
+    [SwaggerOperation(Summary = "Get teams with rosters")]
+    [HttpGet]
+    [Route("teams/rosters")]
+    public async Task<List<TeamRoster>> GetTeamsWithRosters()
+    {
+        return await teamRosterService.GetTeamsWithRosters();
     }
 
     [SwaggerOperation(Summary = "Get layer stats by type")]

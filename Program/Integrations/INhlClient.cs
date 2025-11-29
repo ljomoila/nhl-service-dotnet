@@ -9,6 +9,8 @@ namespace nhl_service_dotnet.Integrations
 
         Task<Player?> GetPlayer(int id);
 
+        Task<List<Player>?> GetRoster(string teamAbbreviation);
+
         Task<List<string>> GetScheduleGamesByDate(string date);
 
         Task<LiveFeed?> GetLiveFeed(string gamePath);

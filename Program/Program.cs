@@ -20,6 +20,7 @@ if (httpsPort.HasValue)
 builder.Services.AddScoped<ITeamService, TeamService>();
 builder.Services.AddScoped<IPlayerService, PlayerService>();
 builder.Services.AddScoped<IGameService, GameService>();
+builder.Services.AddScoped<ITeamRosterService, TeamRosterService>();
 
 builder.Services.AddSingleton<INhlClient, NhlClient>();
 builder.Services.AddHttpClient("INhlClient");
