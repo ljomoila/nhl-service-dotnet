@@ -156,34 +156,10 @@ namespace nhl_service_dotnet.Services
                 GamePlayer mapped;
                 if (type == PlayerType.Goalie)
                 {
-                    int saves = p.Value<int?>("saves") ?? 0;
-                    int shotsAgainst = p.Value<int?>("shotsAgainst") ?? 0;
                     string? saveShotsAgainst = p.Value<string?>("saveShotsAgainst");
+                    double savePctPercent = p.Value<double?>("savePercentage") ?? p.Value<double?>("savePctg") ?? 0;
 
-                    if (!string.IsNullOrWhiteSpace(saveShotsAgainst) && saveShotsAgainst.Contains('/'))
-                    {
-                        var parts = saveShotsAgainst.Split('/');
-                        int.TryParse(parts.ElementAtOrDefault(0), out saves);
-                        int.TryParse(parts.ElementAtOrDefault(1), out shotsAgainst);
-                    }
-                    else if (saves > 0 && shotsAgainst == 0)
-                    {
-                        shotsAgainst = saves;
-                        saveShotsAgainst = $"{saves}/{shotsAgainst}";
-                    }
-
-                    double rawSavePct = p.Value<double?>("savePercentage") ?? p.Value<double?>("savePctg") ?? 0;
-                    if (rawSavePct == 0 && double.TryParse(p.Value<string?>("savePctg"), out var parsedPct))
-                    {
-                        rawSavePct = parsedPct;
-                    }
-                    if (rawSavePct == 0 && shotsAgainst > 0)
-                    {
-                        rawSavePct = shotsAgainst == 0 ? 0 : (double)saves / shotsAgainst;
-                    }
-                    double savePctPercent = rawSavePct * 100;
-
-                    mapped = new GameGoalie()
+                    mapped = new GamePlayer()
                     {
                         id = p.Value<int?>("id") ?? 0,
                         fullName = p.Value<string?>("fullName"),
@@ -193,9 +169,9 @@ namespace nhl_service_dotnet.Services
                         assists = p.Value<int?>("assists") ?? 0,
                         points = p.Value<int?>("points")?.ToString(),
                         playerType = type,
-                        saves = saves,
+                        saves = 0,
                         saveShotsAgainst = saveShotsAgainst,
-                        savePercentage = Math.Round(savePctPercent, 1)
+                        savePercentage = Math.Round(savePctPercent * 100, 2)
                     };
                 }
                 else
@@ -213,20 +189,14 @@ namespace nhl_service_dotnet.Services
                     };
                 }
 
-                int goals = mapped.goals;
-                int assists = mapped.assists;
-                double? savePercentage = mapped is GameGoalie g ? g.savePercentage : 0;
-
-                if (mapped.id != 0 && (goals > 0 || assists > 0 || savePercentage > 0))
+                if (rosterMap.TryGetValue(teamId, out var roster))
                 {
-                    if (rosterMap.TryGetValue(teamId, out var roster))
+                    var details = roster.FirstOrDefault(r => r.id == mapped.id);
+
+                    if (details != null)
                     {
-                        var details = roster.FirstOrDefault(r => r.id == mapped.id);
-                        if (details != null)
-                        {
-                            mapped.nationality = details.nationality;
-                            mapped.link = details.link;
-                        }
+                        mapped.nationality = details.nationality;
+                        mapped.link = details.link;
                     }
                 }
 
@@ -234,7 +204,7 @@ namespace nhl_service_dotnet.Services
             }
 
             var ordered = result
-                .OrderBy(r => r is GameGoalie ? 1 : 0)
+                .OrderBy(r => r.position == "Goalie" ? 1 : 0)
                 .ThenByDescending(r => r.goals + r.assists)
                 .ToList();
 
