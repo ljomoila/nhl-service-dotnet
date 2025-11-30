@@ -13,7 +13,7 @@ namespace Tests.Services
     public class NhlServiceTest
     {
         private Mock<INhlClient> client = new Mock<INhlClient>();
-        private Mock<IMemoryCache> memoryCache = new Mock<IMemoryCache>();
+        private IMemoryCache memoryCache = new MemoryCache(new MemoryCacheOptions());
 
         [Fact]
         public async void TestGetTeams_Success()
@@ -23,7 +23,7 @@ namespace Tests.Services
             client.Setup(x => x.GetTeams()).ReturnsAsync(expectedTeams);
 
             // Act
-            List<Team> teams = await new TeamService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetTeams();
+            List<Team> teams = await new TeamService(client.Object, memoryCache, Options.Create(new AppSettings())).GetTeams();
 
             // Assert
             Assert.Equal(expectedTeams, teams);
@@ -54,7 +54,7 @@ namespace Tests.Services
             client.Setup(x => x.GetTeams()).ReturnsAsync(new List<Team>());
 
             // Act
-            var ex = Assert.ThrowsAsync<NhlException>(async () => await new TeamService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetTeams());
+            var ex = Assert.ThrowsAsync<NhlException>(async () => await new TeamService(client.Object, memoryCache, Options.Create(new AppSettings())).GetTeams());
 
             // Assert
             Assert.Equal("No teams found", ex.Result.Message);
@@ -69,7 +69,7 @@ namespace Tests.Services
             client.Setup(x => x.GetTeams()).ReturnsAsync(expectedTeams);
 
             // Act
-            var ex = Assert.ThrowsAsync<NhlException>(async () => await new TeamService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetTeams());
+            var ex = Assert.ThrowsAsync<NhlException>(async () => await new TeamService(client.Object, memoryCache, Options.Create(new AppSettings())).GetTeams());
 
             // Assert
             Assert.Equal("No teams found", ex.Result.Message);
@@ -85,10 +85,14 @@ namespace Tests.Services
             client.Setup(x => x.GetPlayer(1)).ReturnsAsync(expectedPlayer);
 
             // Act
-            Player player = await new PlayerService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetPlayer(id);
+            Player player = await new PlayerService(client.Object, memoryCache, Options.Create(new AppSettings())).GetPlayer(id);
 
             // Assert
-            Assert.Equal(expectedPlayer, player);
+            Assert.Equal(expectedPlayer.id, player.id);
+            Assert.Equal(expectedPlayer.fullName, player.fullName);
+            Assert.Equal(expectedPlayer.lastName, player.lastName);
+            Assert.Equal(expectedPlayer.nationality, player.nationality);
+            Assert.Equal(expectedPlayer.link, player.link);
         }
 
         [Fact]
@@ -100,7 +104,7 @@ namespace Tests.Services
 
             // Act
             var ex = Assert.ThrowsAsync<NhlException>(
-                async () => await new PlayerService(client.Object, memoryCache.Object, Options.Create(new AppSettings())).GetPlayer(It.IsAny<int>())
+                async () => await new PlayerService(client.Object, memoryCache, Options.Create(new AppSettings())).GetPlayer(It.IsAny<int>())
             );
 
             // Assert
