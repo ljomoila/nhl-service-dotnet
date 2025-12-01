@@ -165,16 +165,14 @@ namespace nhl_service_dotnet.Integrations
 
                 return new LiveFeed()
                 {
-                    gameData = new GameData()
-                    {
-                        status = new Status() { detailedState = result.Value<string>("gameState") }
-                    },
                     liveData = new LiveData()
                     {
                         linescore = new LineScore()
                         {
                             currentPeriodOrdinal = result.SelectToken("periodDescriptor.number")?.ToString(),
                             currentPeriodTimeRemaining = result.SelectToken("clock.timeRemaining")?.ToString(),
+                            periodType = result.SelectToken("periodDescriptor.periodType")?.ToString(),
+                            gameState = result.Value<string>("gameState"),
                             teams = teams
                         },
                         boxscore = new BoxScore() { teams = teams }

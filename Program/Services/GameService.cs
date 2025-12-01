@@ -89,14 +89,36 @@ namespace nhl_service_dotnet.Services
             GameTeam homeTeam = await BuildGameTeam(homeToken, teams, rosterMap);
             GameTeam awayTeam = await BuildGameTeam(awayToken, teams, rosterMap);
 
-            string? detailedState = feed.gameData?.status?.detailedState;
-            GameStatus status = detailedState switch
+            GameStatus status = feed.liveData?.linescore?.gameState switch
             {
                 "FINAL" => GameStatus.Final,
-                "OFF" => GameStatus.Scheduled,
+                "OFF" => GameStatus.Final,
                 "FUT" => GameStatus.Scheduled,
                 _ => GameStatus.InProgress
             };
+
+            string period = feed.liveData?.linescore?.currentPeriodOrdinal ?? "1";
+            string timeRemaining = feed.liveData?.linescore?.currentPeriodTimeRemaining ?? "00:00";
+            string periodType = feed.liveData?.linescore?.periodType ?? "REG";
+
+            string statusString = status.ToString();
+
+            if (status == GameStatus.InProgress)
+            {
+                statusString = $"{timeRemaining}";
+                if (periodType == "REG")
+                {
+                    statusString += $" ({period})";
+                }
+                else
+                {
+                    statusString += $" ({periodType})";
+                }
+            }
+            else if (periodType != "REG")
+            {
+                statusString += $" ({periodType})";
+            }
 
             return new Game()
             {
@@ -104,7 +126,7 @@ namespace nhl_service_dotnet.Services
                 away = awayTeam,
                 timeRemaining = feed.liveData?.linescore?.currentPeriodTimeRemaining,
                 period = feed.liveData?.linescore?.currentPeriodOrdinal,
-                status = status
+                status = statusString.ToUpper()
             };
         }
 
@@ -195,6 +217,7 @@ namespace nhl_service_dotnet.Services
 
                     if (details != null)
                     {
+                        mapped.lastName = details.lastName;
                         mapped.nationality = details.nationality;
                         mapped.link = details.link;
                     }
