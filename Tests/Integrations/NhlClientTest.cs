@@ -146,7 +146,7 @@ namespace Tests.Integrations
 
             // Assert
             Assert.NotNull(feed);
-            Assert.Equal("FINAL", feed?.gameData?.status?.detailedState);
+            Assert.Equal("FINAL", feed?.liveData.linescore.gameState);
         }
 
         private NhlClient CreateClient(HttpClient client)
