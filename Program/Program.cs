@@ -9,14 +9,6 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 var httpsPort = builder.Configuration.GetValue<int?>("ASPNETCORE_HTTPS_PORT");
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
-});
-
 // Add services to the container.
 builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
@@ -24,7 +16,6 @@ builder.Services.AddOptions();
 builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("AppSettings"));
 builder.Services.AddDbContext<NhlDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 if (httpsPort.HasValue)
 {
     builder.Services.AddHttpsRedirection(options => { options.HttpsPort = httpsPort.Value; });
@@ -119,8 +110,6 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.UseRouting();
-app.UseCors("AllowAll");
 app.UseAuthorization();
 
 app.MapControllers();
