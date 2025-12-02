@@ -101,7 +101,7 @@ namespace nhl_service_dotnet.Services
             string timeRemaining = feed.liveData?.linescore?.currentPeriodTimeRemaining ?? "00:00";
             string periodType = feed.liveData?.linescore?.periodType ?? "REG";
 
-            string statusString = status.ToString();
+            string statusString = status == GameStatus.Scheduled ? "Sched" : status.ToString();
 
             if (status == GameStatus.InProgress)
             {
